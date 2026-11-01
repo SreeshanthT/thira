@@ -1,0 +1,78 @@
+name: App smoke test
+
+# Builds the app and checks the viewer renders and follows a window resize on
+# every OS (issue #11). Runners have no real GPU, so they use software adapters.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "app/**"
+      - "ui/**"
+      - "crates/thira-render/**"
+      - ".github/workflows/smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Smoke (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Linux dependencies (WebKitGTK, virtual display, software Vulkan)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential file libssl-dev libxdo-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            mesa-vulkan-drivers xvfb
+          Xvfb :99 -screen 0 1920x1080x24 &
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build the app
+        run: pnpm tauri build --no-bundle
+
+      - name: Smoke test with the default viewer backend
+        run: |
+          bin=target/release/thira
+          [ "$RUNNER_OS" = Windows ] && bin="$bin.exe"
+          # perl's alarm gives a portable timeout on every runner.
+          THIRA_SMOKE_OUT=smoke-default.json perl -e 'alarm shift; exec @ARGV' 180 "$bin"
+          cat smoke-default.json
+
+      - name: Native backend on Linux (informational, see #74)
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        run: |
+          THIRA_VIEWER=native THIRA_SMOKE_OUT=smoke-native.json \
+            perl -e 'alarm shift; exec @ARGV' 180 target/release/thira
+          cat smoke-native.json
+
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-${{ matrix.os }}
+          path: smoke-*.json
+          if-no-files-found: ignore

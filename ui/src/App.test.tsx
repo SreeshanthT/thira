@@ -11,6 +11,9 @@ const ipc = vi.hoisted(() => ({
   saveProjectAs: vi.fn(),
   closeProject: vi.fn(),
   projectInfo: vi.fn(),
+  viewerBackend: vi.fn(),
+  setViewerRect: vi.fn(),
+  viewerFrame: vi.fn(),
 }));
 const dialog = vi.hoisted(() => ({ ask: vi.fn(), open: vi.fn(), save: vi.fn() }));
 
@@ -45,13 +48,15 @@ beforeEach(() => {
   vi.resetAllMocks();
   ipc.appVersion.mockResolvedValue("1.2.3");
   ipc.projectInfo.mockResolvedValue(null);
+  ipc.viewerBackend.mockResolvedValue("native");
+  ipc.setViewerRect.mockResolvedValue(undefined);
 });
 afterEach(cleanup);
 
 describe("App", () => {
   it("shows the app version and that no project is open", async () => {
     render(<App />);
-    expect(await screen.findByText("v1.2.3")).toBeDefined();
+    expect(await screen.findByText("Thira v1.2.3")).toBeDefined();
     expect(screen.getByText("No project open")).toBeDefined();
   });
 
