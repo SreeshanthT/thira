@@ -27,7 +27,7 @@ See [docs/PRD.md](docs/PRD.md) for requirements and [docs/ROADMAP.md](docs/ROADM
 
 ## Contributing
 
-The project is at its very start. Open an issue to discuss ideas before sending a pull request. The `main` branch is protected: all changes go through pull requests.
+The project is at its very start. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow and the DCO sign-off, and open an issue to discuss ideas before sending a pull request. The `main` branch is protected: all changes go through pull requests.
 
 ## License
 

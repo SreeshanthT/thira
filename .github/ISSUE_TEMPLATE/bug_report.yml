@@ -1,0 +1,55 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. For security problems, follow SECURITY.md instead of opening an issue.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Import a 4K MOV file
+        2. Drag it to the timeline
+        3. Press L twice
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Thira version or commit
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows, macOS, Linux]
+    validations:
+      required: true
+  - type: input
+    id: os-details
+    attributes:
+      label: OS version and GPU
+      placeholder: Windows 11 23H2, Intel Iris Xe
+  - type: textarea
+    id: media
+    attributes:
+      label: Media details
+      description: For playback, import or export problems, the output of `ffprobe <file>` helps a lot.
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Attach the log file if Thira crashed.
+      render: text
