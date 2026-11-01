@@ -1,12 +1,17 @@
 name: FFmpeg (LGPL)
 
-# Produces the LGPL-only, shared FFmpeg that Thira links dynamically (PRD
-# section 10, issue #13). Windows and Linux use pinned BtbN builds verified by
-# SHA-256; macOS is built here from the same FFmpeg commit. Every package is
-# checked for GPL or non-free options before it can be published.
+# Builds the LGPL 2.1+ shared FFmpeg that Thira links dynamically (PRD section
+# 10, issue #13): the same commit and the same policy on every OS.
 #
-# Pull requests that change this file build and verify only. Run it manually
-# on main with `publish` to create the `ffmpeg-<version>` release.
+# - --disable-autodetect: nothing is linked just because a runner has it; only
+#   the features listed per platform are enabled.
+# - No --enable-gpl, --enable-nonfree or --enable-version3: checked in config.h.
+# - Linux is built on Ubuntu 22.04 (the PRD minimum); Windows is cross-compiled
+#   there with mingw-w64 and gets MSVC import libraries; macOS is built for arm64
+#   and x86_64 with a macOS 12 minimum.
+#
+# Pull requests that change this file build and verify only. Run it manually on
+# main with `publish` to create the `ffmpeg-<version>` release.
 on:
   workflow_dispatch:
     inputs:
@@ -22,87 +27,54 @@ permissions:
 
 env:
   FFMPEG_VERSION: "8.1.3"
-  # release/8.1 at n8.1.3-29, the commit BtbN built.
+  # release/8.1 at n8.1.3-29.
   FFMPEG_COMMIT: ad3b795b72388fbb2b216e1e6fd38fba994e1df0
-  BTBN_TAG: autobuild-2026-11-01-12-49
+  COMMON_FLAGS: >-
+    --enable-shared --disable-static --disable-autodetect
+    --disable-doc --disable-debug --disable-network --enable-zlib
 
 jobs:
-  prebuilt:
-    name: Verify ${{ matrix.platform }} (BtbN)
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: windows-x64
-            os: windows-latest
-            asset: ffmpeg-n8.1.3-29-gad3b795b72-win64-lgpl-shared-8.1.zip
-            sha256: 786b43f77ea260af71fbb1bcdaabd43df83492122fb5575027f659d490d30b37
-          - platform: linux-x64
-            os: ubuntu-22.04
-            asset: ffmpeg-n8.1.3-29-gad3b795b72-linux64-lgpl-shared-8.1.tar.xz
-            sha256: bcf24617e957f296e763e9f5d208065f27483f07aba433bc09d573f4d483c7fe
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Download and verify checksum
-        run: |
-          curl -fsSL -o "${{ matrix.asset }}" \
-            "https://github.com/BtbN/FFmpeg-Builds/releases/download/$BTBN_TAG/${{ matrix.asset }}"
-          echo "${{ matrix.sha256 }}  ${{ matrix.asset }}" | sha256sum -c -
-
-      - name: Unpack into the common layout
-        run: |
-          mkdir unpacked
-          case "${{ matrix.asset }}" in
-            *.zip) unzip -q "${{ matrix.asset }}" -d unpacked ;;
-            *) tar -xf "${{ matrix.asset }}" -C unpacked ;;
-          esac
-          src=$(echo unpacked/*)
-          dest="ffmpeg-$FFMPEG_VERSION-${{ matrix.platform }}"
-          mkdir "$dest"
-          cp -R "$src/bin" "$src/lib" "$src/include" "$dest/"
-          cp "$src/LICENSE.txt" "$dest/LICENSE.txt"
-          echo "DEST=$dest" >> "$GITHUB_ENV"
-
-      - name: Check the license is LGPL
-        run: |
-          ff="$DEST/bin/ffmpeg"
-          [ "$RUNNER_OS" = Linux ] && export LD_LIBRARY_PATH="$PWD/$DEST/lib"
-          "$ff" -hide_banner -buildconf > buildconf.txt
-          cat buildconf.txt
-          if grep -qE -- '--enable-(gpl|nonfree|version3)' buildconf.txt; then
-            echo "::error::GPL, non-free or (L)GPLv3 option found"; exit 1
-          fi
-          "$ff" -hide_banner -L | head -5 | tee license.txt
-          grep -q "Lesser General Public License" license.txt
-
-      - name: Package
-        run: |
-          printf 'Source: https://github.com/FFmpeg/FFmpeg/tree/%s\nBuild: https://github.com/BtbN/FFmpeg-Builds/releases/tag/%s (%s)\n' \
-            "$FFMPEG_COMMIT" "$BTBN_TAG" "${{ matrix.asset }}" > "$DEST/SOURCE.txt"
-          cp buildconf.txt "$DEST/BUILDCONF.txt"
-          tar -czf "$DEST.tar.gz" "$DEST"
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: ffmpeg-${{ matrix.platform }}
-          path: ffmpeg-*.tar.gz
-
-  macos:
+  build:
     name: Build ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
         include:
+          - platform: linux-x64
+            os: ubuntu-22.04
+            flags: --enable-pthreads
+          - platform: windows-x64
+            os: ubuntu-22.04
+            flags: >-
+              --enable-cross-compile --arch=x86_64 --target-os=mingw32
+              --cross-prefix=x86_64-w64-mingw32- --enable-w32threads
+              --enable-mediafoundation --enable-d3d11va --enable-dxva2
+              --extra-ldflags=-static-libgcc
           - platform: macos-arm64
+            os: macos-latest
             arch: arm64
+            flags: --enable-pthreads --enable-videotoolbox --enable-audiotoolbox
           - platform: macos-x64
+            os: macos-latest
             arch: x86_64
-    runs-on: macos-latest
+            flags: >-
+              --enable-cross-compile --arch=x86_64 --target-os=darwin
+              --enable-pthreads --enable-videotoolbox --enable-audiotoolbox
+    runs-on: ${{ matrix.os }}
+    env:
+      DEST: ${{ github.workspace }}/ffmpeg-8.1.3-${{ matrix.platform }}
     steps:
-      - name: Install build tools
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm pkg-config zlib1g-dev
+          if [ "${{ matrix.platform }}" = windows-x64 ]; then
+            sudo apt-get install -y mingw-w64 libz-mingw-w64-dev llvm
+          fi
+
+      - name: Install build tools (macOS)
+        if: runner.os == 'macOS'
         run: brew install nasm pkg-config
 
       - name: Fetch FFmpeg source at the pinned commit
@@ -112,58 +84,101 @@ jobs:
           git fetch -q --depth 1 https://github.com/FFmpeg/FFmpeg.git "$FFMPEG_COMMIT"
           git checkout -q FETCH_HEAD
 
-      - name: Configure (LGPL only, shared, no network)
+      - name: Configure
         working-directory: src
         run: |
-          dest="$GITHUB_WORKSPACE/ffmpeg-$FFMPEG_VERSION-${{ matrix.platform }}"
-          flags="-arch ${{ matrix.arch }} -mmacosx-version-min=12.0"
-          cross=()
-          if [ "${{ matrix.arch }}" != "$(uname -m)" ]; then
-            cross=(--enable-cross-compile --arch=${{ matrix.arch }} --target-os=darwin)
+          extra=()
+          if [ "$RUNNER_OS" = macOS ]; then
+            mac="-arch ${{ matrix.arch }} -mmacosx-version-min=12.0"
+            extra=(--cc="clang -arch ${{ matrix.arch }}" --extra-cflags="$mac" --extra-ldflags="$mac"
+                   --extra-ldexeflags="-Wl,-rpath,@executable_path/../lib" --install-name-dir=@rpath)
           fi
-          ./configure --prefix="$dest" "${cross[@]}" \
-            --cc="clang -arch ${{ matrix.arch }}" \
-            --extra-cflags="$flags" --extra-ldflags="$flags" \
-            --enable-shared --disable-static \
-            --disable-doc --disable-debug --disable-network \
-            --enable-videotoolbox --enable-audiotoolbox \
-            --install-name-dir=@rpath
-          echo "DEST=$dest" >> "$GITHUB_ENV"
+          # shellcheck disable=SC2086 # flags are deliberately word-split
+          ./configure --prefix="$DEST" $COMMON_FLAGS ${{ matrix.flags }} "${extra[@]}" \
+            || { tail -50 ffbuild/config.log; exit 1; }
 
-      - name: Check the license is LGPL
+      - name: Check the license is LGPL 2.1+
         working-directory: src
         run: |
           grep -E '^#define CONFIG_(GPL|NONFREE|VERSION3) ' config.h | tee flags.txt
+          [ "$(wc -l < flags.txt)" -eq 3 ]
           if grep -qE ' 1$' flags.txt; then
             echo "::error::GPL, non-free or (L)GPLv3 enabled"; exit 1
           fi
 
       - name: Build
         working-directory: src
-        run: make -j"$(sysctl -n hw.ncpu)" && make install
+        run: make -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu)" && make install
 
-      - name: Smoke-run the native build
-        if: matrix.arch == 'arm64'
+      - name: Add MSVC import libraries (Windows)
+        if: matrix.platform == 'windows-x64'
         run: |
-          "$DEST/bin/ffmpeg" -hide_banner -L | head -5 | tee license.txt
-          grep -q "Lesser General Public License" license.txt
+          # Rust on Windows links with MSVC, which needs .lib import libraries;
+          # mingw installs .def files we can turn into them.
+          cd "$DEST/lib"
+          for def in *.def; do
+            name="${def%-*}"              # avcodec-62.def -> avcodec
+            llvm-dlltool -m i386:x86-64 -d "$def" -l "$name.lib" -D "${def%.def}.dll"
+          done
+          ls -la
+
+      - name: Check Windows DLLs need only system libraries
+        if: matrix.platform == 'windows-x64'
+        run: |
+          x86_64-w64-mingw32-objdump -p "$DEST"/bin/*.dll | grep "DLL Name" | sort -u | tee imports.txt
+          if grep -iE 'libgcc|libwinpthread|libstdc|zlib' imports.txt; then
+            echo "::error::DLL depends on a non-system runtime"; exit 1
+          fi
 
       - name: Package
         run: |
           cp src/COPYING.LGPLv2.1 "$DEST/LICENSE.txt"
-          grep '^FFMPEG_CONFIGURATION' src/config.h > "$DEST/BUILDCONF.txt" || true
-          printf 'Source: https://github.com/FFmpeg/FFmpeg/tree/%s\nBuilt by the Thira "FFmpeg (LGPL)" workflow\n' \
+          grep '^#define FFMPEG_CONFIGURATION' src/config.h > "$DEST/BUILDCONF.txt"
+          printf 'Source: https://github.com/FFmpeg/FFmpeg/tree/%s\nBuilt by the Thira "FFmpeg (LGPL)" workflow.\n' \
             "$FFMPEG_COMMIT" > "$DEST/SOURCE.txt"
-          tar -czf "$(basename "$DEST").tar.gz" "$(basename "$DEST")"
+          tar -czf "$(basename "$DEST").tar.gz" -C "$(dirname "$DEST")" "$(basename "$DEST")"
 
       - uses: actions/upload-artifact@v7
         with:
           name: ffmpeg-${{ matrix.platform }}
           path: ffmpeg-*.tar.gz
 
+  verify:
+    name: Verify ${{ matrix.platform }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: linux-x64, os: ubuntu-22.04 }
+          - { platform: windows-x64, os: windows-latest }
+          - { platform: macos-arm64, os: macos-latest }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: ffmpeg-${{ matrix.platform }}
+      - name: Run ffmpeg and ffprobe from the package
+        run: |
+          tar -xzf ffmpeg-*.tar.gz
+          dir=$(echo ffmpeg-*-${{ matrix.platform }})
+          export LD_LIBRARY_PATH="$PWD/$dir/lib"
+          "$dir/bin/ffmpeg" -hide_banner -L | head -5 | tee license.txt
+          grep -q "Lesser General Public License" license.txt
+          "$dir/bin/ffprobe" -hide_banner -version | head -3
+          # Encode a short test clip and probe it, to prove the libraries work.
+          "$dir/bin/ffmpeg" -hide_banner -loglevel error -f lavfi -i testsrc2=size=320x180:rate=25:duration=1 \
+            -c:v mpeg4 test.mkv
+          "$dir/bin/ffprobe" -hide_banner -loglevel error -show_entries stream=codec_name,width,height \
+            -of csv=p=0 test.mkv | tee probe.txt
+          grep -q "mpeg4,320,180" probe.txt
+
   publish:
     name: Publish release
-    needs: [prebuilt, macos]
+    needs: [build, verify]
     if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -179,6 +194,6 @@ jobs:
         run: |
           sha256sum ffmpeg-*.tar.gz | tee SHA256SUMS
           gh release create "ffmpeg-$FFMPEG_VERSION" --repo "$GITHUB_REPOSITORY" \
-            --title "FFmpeg $FFMPEG_VERSION (LGPL, shared)" \
-            --notes "LGPL-only shared FFmpeg $FFMPEG_VERSION for Thira development and packaging. Source: https://github.com/FFmpeg/FFmpeg/tree/$FFMPEG_COMMIT. Windows and Linux repackage BtbN build $BTBN_TAG; macOS is built by this workflow. Each package contains LICENSE.txt, SOURCE.txt and BUILDCONF.txt." \
+            --title "FFmpeg $FFMPEG_VERSION (LGPL 2.1+, shared)" \
+            --notes "LGPL 2.1+ shared FFmpeg $FFMPEG_VERSION for Thira, built by the FFmpeg (LGPL) workflow from https://github.com/FFmpeg/FFmpeg/tree/$FFMPEG_COMMIT with no GPL, non-free or version3 options. Each package contains LICENSE.txt, SOURCE.txt and BUILDCONF.txt." \
             ffmpeg-*.tar.gz SHA256SUMS
