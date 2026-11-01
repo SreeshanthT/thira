@@ -1,0 +1,19 @@
+[package]
+name = "thira-viewer-spike"
+description = "Throwaway spike for issue #2: how GPU frames reach the screen"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+# Standalone so the main workspace and its CI do not compile wgpu for this spike.
+[workspace]
+
+[build-dependencies]
+tauri-build = "2"
+
+[dependencies]
+pollster = "1.0.1"
+serde_json = "1.0.154"
+tauri = { version = "2", features = ["macos-private-api"] }
+wgpu = "30.0.1"

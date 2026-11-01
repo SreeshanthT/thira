@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Thira Viewer Spike",
+  "identifier": "org.thira.viewer-spike",
+  "build": { "frontendDist": "./ui" },
+  "app": {
+    "withGlobalTauri": true,
+    "macOSPrivateApi": true,
+    "windows": [{ "label": "main", "title": "Viewer spike", "width": 1280, "height": 720, "transparent": true }],
+    "security": { "csp": null }
+  },
+  "bundle": { "active": false, "icon": ["../../app/icons/icon.ico", "../../app/icons/icon.png"] }
+}
