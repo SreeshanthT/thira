@@ -249,9 +249,13 @@ Dates are not committed until M0 is complete and velocity is measured.
 ## 15. Open questions
 
 1. ~~Final project file format: single file (zip) or folder?~~ Decided: a single SQLite `.thira` file ([ADR 0002](adr/0002-project-file-format.md)).
-2. Minimum GPU requirements for Linux (Vulkan 1.2 baseline)?
+2. ~~Minimum GPU requirements for Linux (Vulkan 1.2 baseline)?~~ Decided (#4): supported Linux configurations need a GPU with a Vulkan driver, wgpu's first-class backend there. OpenGL ES 3.0+ (wgpu's best-effort backend) is a fallback without performance targets. Software renderers such as llvmpipe are for CI only. wgpu does not publish a minimum Vulkan version, so none is set here; revisit if a required feature needs one.
 3. Whether to publish under a foundation or personal account.
-4. Name and logo trademark search for "Thira".
+4. Name and logo trademark search for "Thira". Preliminary findings (#4, 2026-11-01; public web search, not legal advice; only the US register was checked):
+   - A pending US application for THIRA ([serial 99836509](https://tsdr.uspto.gov/statusview/sn99836509)) by Thira LLC, filed 2026-05-20 in Class 42 for "design and development of artificial intelligence (AI) software". Not registered; an Office action is outstanding. A desktop video editor would normally fall under Class 9, but both are software, so there is some risk of conflict.
+   - An unrelated meditation app, "Thira: Meditation & Wisdom" (Soliton Group LLC).
+   - No video editor or open-source project of the same name found.
+   - Still open: the maintainer decides whether to keep the name; EU, UK and Indian registers are not yet checked; legal review before the first binary release (section 11).
 5. Which languages to localize first after English?
 
 ## 16. Revision history
