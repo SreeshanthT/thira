@@ -1,0 +1,23 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Tauri
+src-tauri/target/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local env and caches
+.env
+.env.*
+*.thira-cache
