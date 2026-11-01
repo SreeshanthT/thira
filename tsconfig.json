@@ -16,5 +16,5 @@
     "noEmit": true,
     "types": ["vite/client"]
   },
-  "include": ["ui/src", "vite.config.ts", "eslint.config.js"]
+  "include": ["ui/src", "vite.config.ts"]
 }
