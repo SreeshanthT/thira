@@ -34,7 +34,7 @@ docs/            PRD, roadmap, ADRs, user docs
 | --- | --- | --- |
 | `thira-time` | Rational time, frame rates, timecode (including drop-frame) | none |
 | `thira-model` | Plain data types: project, timeline, track, clip, media reference. No behavior beyond validation | `thira-time` |
-| `thira-edit` | Command trait, command bus, undo/redo history, edit operations (insert, trim, blade, …) | `thira-model` |
+| `thira-edit` | Command bus, primitive commands (a serializable enum, each with an exact inverse), undo/redo history, edit operations (insert, trim, blade, …) built as transactions of primitives | `thira-model` |
 | `thira-store` | SQLite persistence, schema migrations, atomic save, autosave | `thira-model` |
 | `thira-media` | FFmpeg wrappers: probe, decode, encode; thumbnails and waveforms | `thira-time` |
 | `thira-render` | wgpu device, render graph, GPU effects, frame cache | `thira-model`, `thira-media` |

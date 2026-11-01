@@ -3427,6 +3427,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "thira-edit"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thira-model",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "thira-model"
 version = "0.0.0"
 dependencies = [
