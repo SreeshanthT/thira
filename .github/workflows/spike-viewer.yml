@@ -30,7 +30,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
-            libxdo-dev xvfb mesa-vulkan-drivers
+            libxdo-dev xvfb mesa-vulkan-drivers imagemagick
+
+      - name: Start virtual display
+        if: runner.os == 'Linux'
+        run: |
+          Xvfb :99 -screen 0 1920x1080x24 &
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -42,18 +48,24 @@ jobs:
         run: |
           bin=target/release/thira-viewer-spike
           [ "$RUNNER_OS" = Windows ] && bin="$bin.exe"
-          run() {
-            # perl's alarm gives a portable timeout on every runner.
-            if [ "$RUNNER_OS" = Linux ]; then
-              xvfb-run -a -s "-screen 0 1920x1080x24" perl -e 'alarm shift; exec @ARGV' 180 "$bin"
-            else
-              perl -e 'alarm shift; exec @ARGV' 180 "$bin"
-            fi
+          screenshot() {
+            case "$RUNNER_OS" in
+              Linux) import -window root "$1" ;;
+              macOS) screencapture -x "$1" ;;
+              Windows) powershell -NoProfile -Command "Add-Type -AssemblyName System.Drawing, System.Windows.Forms; \$b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; \$i = New-Object System.Drawing.Bitmap \$b.Width, \$b.Height; [System.Drawing.Graphics]::FromImage(\$i).CopyFromScreen(\$b.Location, [System.Drawing.Point]::Empty, \$b.Size); \$i.Save('$1')" ;;
+            esac
           }
           for mode in transfer native; do
             echo "::group::$mode"
-            THIRA_SPIKE_MODE=$mode THIRA_SPIKE_FRAMES=120 THIRA_SPIKE_OUT="result-$mode.json" run \
-              || echo "$mode exited with $?"
+            # perl's alarm gives a portable timeout on every runner.
+            THIRA_SPIKE_MODE=$mode THIRA_SPIKE_FRAMES=120 THIRA_SPIKE_HOLD_MS=10000 \
+              THIRA_SPIKE_OUT="result-$mode.json" perl -e 'alarm shift; exec @ARGV' 180 "$bin" &
+            pid=$!
+            if [ "$mode" = native ]; then
+              # Native mode holds its last frame for 10 s after ~4-6 s of rendering.
+              sleep 9 && screenshot "shot-native.png" || echo "screenshot failed"
+            fi
+            wait $pid || echo "$mode exited with $?"
             cat "result-$mode.json" 2>/dev/null || echo "{\"mode\": \"$mode\", \"error\": \"no result\"}" > "result-$mode.json"
             echo "::endgroup::"
           done
@@ -61,4 +73,6 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: viewer-spike-${{ matrix.os }}
-          path: spikes/viewer/result-*.json
+          path: |
+            spikes/viewer/result-*.json
+            spikes/viewer/shot-*.png

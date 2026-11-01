@@ -88,12 +88,17 @@ fn stats(mut ms: Vec<f64>) -> serde_json::Value {
 }
 
 /// Native mode: render and present `frames` frames straight to the window.
-fn run_native(app: tauri::AppHandle, window: tauri::WebviewWindow, frames: usize, out: String) {
-    let instance = wgpu::Instance::default();
-    let surface = match instance.create_surface(window.clone()) {
-        Ok(s) => s,
-        Err(e) => return finish(&app, &out, "native", None, serde_json::json!({ "error": e.to_string() })),
-    };
+///
+/// The surface must be created on the main thread (macOS requires NSView access
+/// there); rendering and presenting then run on this worker thread.
+fn run_native(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+    instance: wgpu::Instance,
+    surface: wgpu::Surface<'static>,
+    frames: usize,
+    out: String,
+) {
     let mut gpu = match Gpu::new(instance, Some(&surface)) {
         Ok(g) => g,
         Err(e) => return finish(&app, &out, "native", None, serde_json::json!({ "error": e })),
@@ -168,10 +173,13 @@ fn main() {
             if native {
                 let window = app.get_webview_window("main").ok_or("no main window")?;
                 let handle = app.handle().clone();
+                // `setup` runs on the main thread, where the surface has to be created.
+                let instance = wgpu::Instance::default();
+                let surface = instance.create_surface(window.clone())?;
                 std::thread::spawn(move || {
                     // Let the webview paint its transparent overlay first.
                     std::thread::sleep(Duration::from_millis(1500));
-                    run_native(handle, window, frames, out);
+                    run_native(handle, window, instance, surface, frames, out);
                 });
             }
             Ok(())
