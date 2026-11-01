@@ -1,0 +1,19 @@
+[package]
+name = "thira-render"
+description = "GPU rendering for Thira: device setup, viewers and offscreen frames"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+pollster = "1.0.1"
+thiserror = "2.0.21"
+wgpu = "30"
+
+[dev-dependencies]
+
+[lints]
+workspace = true

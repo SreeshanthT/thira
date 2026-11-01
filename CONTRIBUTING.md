@@ -41,6 +41,8 @@ sudo apt install build-essential curl wget file libssl-dev libxdo-dev \
   libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
 ```
 
+Rendering tests need a GPU or a software adapter. Windows and macOS always have one; on a Linux machine without a GPU, install Mesa's software Vulkan driver: `sudo apt install mesa-vulkan-drivers`.
+
 FFmpeg setup will be added here when media support lands ([#13](https://github.com/SreeshanthT/thira/issues/13)).
 
 ## Building and testing
