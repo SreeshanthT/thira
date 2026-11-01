@@ -1,0 +1,34 @@
+# cargo-deny policy. Thira is Apache-2.0, so no copyleft that would apply to
+# the whole program (GPL, AGPL, LGPL in Rust crates, which link statically).
+# FFmpeg is LGPL but linked dynamically and is not a Rust crate.
+
+[graph]
+all-features = true
+
+[licenses]
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "BSD-3-Clause",
+    "Zlib",
+    "Unicode-3.0",
+    "CC0-1.0",
+    "0BSD",
+    # File-level copyleft: fine to link as long as we do not modify the files.
+    "MPL-2.0",
+]
+confidence-threshold = 0.9
+
+[advisories]
+# Fail on vulnerabilities anywhere; "unmaintained" only for crates we depend on directly.
+unmaintained = "workspace"
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
