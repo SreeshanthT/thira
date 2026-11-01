@@ -1,8 +1,11 @@
 :root {
   color-scheme: dark;
   --bg: #16171a;
+  --panel: #1f2024;
+  --border: #2d2f35;
   --fg: #e6e7ea;
   --muted: #8b8f98;
+  --danger: #ff7a7a;
   font-family: system-ui, sans-serif;
 }
 
@@ -17,7 +20,54 @@ body,
 
 .app {
   display: grid;
+  grid-template-rows: auto auto 1fr;
   height: 100%;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar button {
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 10px;
+}
+
+.toolbar button:disabled {
+  color: var(--muted);
+}
+
+.project {
+  margin-left: 12px;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.path {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error {
+  margin: 0;
+  padding: 6px 10px;
+  color: var(--danger);
+}
+
+.workspace {
+  display: grid;
   place-content: center;
   text-align: center;
 }
