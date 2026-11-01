@@ -2,13 +2,14 @@
 /target/
 **/*.rs.bk
 
-# Node
+# Node and UI build output
 node_modules/
-dist/
+/dist/
 .vite/
+*.tsbuildinfo
 
-# Tauri
-src-tauri/target/
+# Tauri generated files
+/app/gen/
 
 # OS and editors
 .DS_Store

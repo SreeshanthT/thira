@@ -45,14 +45,19 @@ FFmpeg setup will be added here when media support lands ([#13](https://github.c
 
 ## Building and testing
 
-The application scaffold is being added in [#14](https://github.com/SreeshanthT/thira/issues/14). Once it lands, these commands work from the repository root:
+Run these from the repository root:
 
 ```sh
 pnpm install           # install UI dependencies
 pnpm tauri dev         # run the app with hot reload
 cargo test --workspace # run Rust tests
 pnpm test              # run UI tests
+pnpm lint              # ESLint and Prettier
+cargo clippy --workspace --all-targets
+cargo fmt --all
 ```
+
+The repository layout follows [ADR 0001](docs/adr/0001-architecture.md): engine crates in `crates/`, the Tauri shell in `app/`, and the React UI in `ui/`.
 
 ## Making a change
 
