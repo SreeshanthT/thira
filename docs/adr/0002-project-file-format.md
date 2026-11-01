@@ -33,7 +33,7 @@ The editor keeps the project in memory ([`thira-edit`](../../crates/thira-edit))
 
 1. Write the complete project to a new database, `My Film.thira.tmp`, in the same folder.
 2. Flush it to disk.
-3. Atomically replace `My Film.thira` with it (rename on macOS and Linux, `ReplaceFileW` on Windows).
+3. Atomically replace `My Film.thira` with it (`rename`, which on Windows is `MoveFileExW` with `MOVEFILE_REPLACE_EXISTING`).
 
 A crash at any point leaves either the old file or the new one, never a mix. The saved file uses SQLite's default rollback journal, not WAL, so no `-wal` or `-shm` sidecar files are left next to it. A project of a few thousand clips writes in well under a second, so rewriting the whole file each save is acceptable; incremental saves can be added later without changing the format.
 
