@@ -2,14 +2,11 @@ name: App smoke test
 
 # Builds the app and checks the viewer renders and follows a window resize on
 # every OS (issue #11). Runners have no real GPU, so they use software adapters.
+# Runs on every PR so the required "Smoke result" check always reports; the
+# expensive matrix only runs when the app, UI or renderer changed.
 on:
   workflow_dispatch:
   pull_request:
-    paths:
-      - "app/**"
-      - "ui/**"
-      - "crates/thira-render/**"
-      - ".github/workflows/smoke.yml"
 
 permissions:
   contents: read
@@ -19,8 +16,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect app changes
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.diff.outputs.app }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -z "$BASE" ]; then
+            echo "app=true" >> "$GITHUB_OUTPUT"   # manual run
+          elif git diff --name-only "$BASE" HEAD | grep -qE '^(app/|ui/|crates/|package\.json|pnpm-lock\.yaml|Cargo\.lock|\.github/workflows/smoke\.yml)'; then
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "app=false" >> "$GITHUB_OUTPUT"
+          fi
+
   smoke:
     name: Smoke (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -76,3 +96,17 @@ jobs:
           name: smoke-${{ matrix.os }}
           path: smoke-*.json
           if-no-files-found: ignore
+
+  # The required check: passes when every smoke job passed or was skipped.
+  result:
+    name: Smoke result
+    needs: [changes, smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          CHANGES: ${{ needs.changes.result }}
+          SMOKE: ${{ needs.smoke.result }}
+        run: |
+          echo "changes=$CHANGES smoke=$SMOKE"
+          [ "$CHANGES" = success ] && { [ "$SMOKE" = success ] || [ "$SMOKE" = skipped ]; }
