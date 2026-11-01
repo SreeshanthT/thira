@@ -14,3 +14,4 @@ An ADR records one significant decision: the context, the choice, and its conseq
 | --- | --- | --- |
 | [0001](0001-architecture.md) | Crate boundaries, threading model and engine-to-UI IPC | Accepted |
 | [0002](0002-project-file-format.md) | Project file format: a single SQLite file | Accepted |
+| [0003](0003-viewer-presentation.md) | Viewer presentation: native surface under a transparent webview | Accepted |
