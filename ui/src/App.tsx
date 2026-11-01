@@ -2,6 +2,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useState } from "react";
 import { appVersion, isEngineError, projectInfo, type ProjectInfo } from "./ipc";
 import * as project from "./project";
+import { Viewer } from "./Viewer";
 
 // Placeholder shell; the panel layout arrives in #15.
 export function App() {
@@ -100,6 +101,7 @@ export function App() {
             "No project open"
           )}
         </span>
+        {version && <span className="version">Thira v{version}</span>}
       </header>
       {error && (
         <p className="error" role="alert">
@@ -107,8 +109,7 @@ export function App() {
         </p>
       )}
       <section className="workspace">
-        <h1>Thira</h1>
-        {version && <p className="version">v{version}</p>}
+        <Viewer />
       </section>
     </main>
   );

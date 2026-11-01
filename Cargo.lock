@@ -3912,10 +3912,13 @@ dependencies = [
 name = "thira"
 version = "0.0.0"
 dependencies = [
+ "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
  "thira-engine",
+ "thira-render",
 ]
 
 [[package]]

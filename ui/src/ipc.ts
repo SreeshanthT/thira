@@ -48,3 +48,28 @@ export function closeProject(force: boolean): Promise<void> {
 export function projectInfo(): Promise<ProjectInfo | null> {
   return invoke("project_info");
 }
+
+/** Viewer backend chosen by the shell (ADR 0003). */
+export type ViewerBackend = "native" | "transfer";
+
+/** A rectangle in physical pixels from the top-left of the webview. */
+export interface ViewerRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export function viewerBackend(): Promise<ViewerBackend> {
+  return invoke("viewer_backend");
+}
+
+/** Tells the native viewer where to draw; `null` hides it. */
+export function setViewerRect(rect: ViewerRect | null): Promise<void> {
+  return invoke("set_viewer_rect", { rect });
+}
+
+/** One RGBA frame from the transfer backend. */
+export function viewerFrame(width: number, height: number): Promise<ArrayBuffer> {
+  return invoke("viewer_frame", { width, height });
+}

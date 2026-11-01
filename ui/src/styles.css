@@ -18,9 +18,17 @@ body,
   color: var(--fg);
 }
 
+/* Native viewer (ADR 0003): the page is transparent so the video drawn under the
+   webview shows through the viewer hole. Panels stay opaque. */
+:root[data-viewer="native"],
+:root[data-viewer="native"] body,
+:root[data-viewer="native"] #root {
+  background: transparent;
+}
+
 .app {
-  display: grid;
-  grid-template-rows: auto auto 1fr;
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 
@@ -64,14 +72,30 @@ body,
   margin: 0;
   padding: 6px 10px;
   color: var(--danger);
+  background: var(--panel);
 }
 
 .workspace {
-  display: grid;
-  place-content: center;
-  text-align: center;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  padding: 12px;
+}
+
+.viewer {
+  flex: 1;
+  min-width: 0;
+  /* Transparent: the native backend draws the video underneath. */
+  background: transparent;
+}
+
+.viewer canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .version {
+  margin-left: auto;
   color: var(--muted);
 }
