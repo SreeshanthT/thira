@@ -1,0 +1,64 @@
+name: Viewer spike
+
+# Measures both viewer approaches from issue #2 on every OS. Not a required check:
+# runners have no real GPU, so numbers are software-rendered and only indicative.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ["spikes/viewer/**", ".github/workflows/spike-viewer.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    name: Viewer spike (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: spikes/viewer
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Linux dependencies (WebKitGTK, virtual display, software Vulkan)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            libxdo-dev xvfb mesa-vulkan-drivers
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: spikes/viewer
+
+      - run: cargo build --release
+
+      - name: Run both modes
+        run: |
+          bin=target/release/thira-viewer-spike
+          [ "$RUNNER_OS" = Windows ] && bin="$bin.exe"
+          run() {
+            # perl's alarm gives a portable timeout on every runner.
+            if [ "$RUNNER_OS" = Linux ]; then
+              xvfb-run -a -s "-screen 0 1920x1080x24" perl -e 'alarm shift; exec @ARGV' 180 "$bin"
+            else
+              perl -e 'alarm shift; exec @ARGV' 180 "$bin"
+            fi
+          }
+          for mode in transfer native; do
+            echo "::group::$mode"
+            THIRA_SPIKE_MODE=$mode THIRA_SPIKE_FRAMES=120 THIRA_SPIKE_OUT="result-$mode.json" run \
+              || echo "$mode exited with $?"
+            cat "result-$mode.json" 2>/dev/null || echo "{\"mode\": \"$mode\", \"error\": \"no result\"}" > "result-$mode.json"
+            echo "::endgroup::"
+          done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: viewer-spike-${{ matrix.os }}
+          path: spikes/viewer/result-*.json
