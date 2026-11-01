@@ -71,6 +71,9 @@ jobs:
           sudo apt-get install -y nasm pkg-config zlib1g-dev
           if [ "${{ matrix.platform }}" = windows-x64 ]; then
             sudo apt-get install -y mingw-w64 libz-mingw-w64-dev llvm
+            # Link zlib statically: without its DLL import library the linker
+            # uses libz.a, so no zlib1.dll has to ship with FFmpeg.
+            sudo rm -f /usr/x86_64-w64-mingw32/lib/libz.dll.a
           fi
 
       - name: Install build tools (macOS)
