@@ -1,0 +1,21 @@
+[package]
+name = "thira-model"
+description = "Project data model for Thira: projects, media, timelines, tracks and clips"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0.229", features = ["derive", "rc"] }
+thira-time = { path = "../thira-time" }
+thiserror = "2.0.21"
+uuid = { version = "1.29.0", features = ["v7", "serde"] }
+
+[dev-dependencies]
+serde_json = "1.0.154"
+
+[lints]
+workspace = true

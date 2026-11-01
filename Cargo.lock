@@ -3427,10 +3427,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "thira-model"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thira-time",
+ "thiserror 2.0.21",
+ "uuid",
+]
+
+[[package]]
 name = "thira-time"
 version = "0.0.0"
 dependencies = [
  "proptest",
+ "serde",
 ]
 
 [[package]]
