@@ -1,10 +1,29 @@
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use crate::Rational;
 
 /// A video frame rate in frames per second, such as `24000/1001` (23.976).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+///
+/// Serializes as its [`Rational`]; deserializing rejects rates that are not positive.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(try_from = "Rational", into = "Rational")]
 pub struct FrameRate(Rational);
+
+impl TryFrom<Rational> for FrameRate {
+    type Error = &'static str;
+
+    fn try_from(fps: Rational) -> Result<Self, Self::Error> {
+        Self::new(fps).ok_or("frame rate must be positive")
+    }
+}
+
+impl From<FrameRate> for Rational {
+    fn from(rate: FrameRate) -> Self {
+        rate.0
+    }
+}
 
 impl FrameRate {
     pub const FPS_23_976: Self = Self::ntsc(24);

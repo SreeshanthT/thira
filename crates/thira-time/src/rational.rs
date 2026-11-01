@@ -2,6 +2,8 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
+use serde::{Deserialize, Serialize};
+
 /// Errors from constructing a [`Rational`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RationalError {
@@ -28,10 +30,35 @@ impl std::error::Error for RationalError {}
 /// `1/2 == 2/4`. Arithmetic is computed in `i128` and reduced; the checked
 /// methods return `None` if the reduced result does not fit in `i64`, and the
 /// operators panic in that case, like integer overflow.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(try_from = "RawRational", into = "RawRational")]
 pub struct Rational {
     num: i64,
     den: i64,
+}
+
+/// Serialized form `{ "num": n, "den": d }`. Deserializing reduces it and rejects `den == 0`.
+#[derive(Serialize, Deserialize)]
+struct RawRational {
+    num: i64,
+    den: i64,
+}
+
+impl TryFrom<RawRational> for Rational {
+    type Error = RationalError;
+
+    fn try_from(raw: RawRational) -> Result<Self, Self::Error> {
+        Self::new(raw.num, raw.den)
+    }
+}
+
+impl From<Rational> for RawRational {
+    fn from(r: Rational) -> Self {
+        Self {
+            num: r.num,
+            den: r.den,
+        }
+    }
 }
 
 impl Rational {

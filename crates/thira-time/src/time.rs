@@ -1,13 +1,18 @@
 use std::fmt;
 use std::ops::{Add, Neg, Sub};
 
+use serde::{Deserialize, Serialize};
+
 use crate::{FrameRate, Rational};
 
 /// A point in time or a duration, in exact seconds.
 ///
 /// Times convert to frame and sample indices by flooring: frame `n` covers
 /// `[n / fps, (n + 1) / fps)`, so `Time::from_frame(n, r).to_frame(r) == n` for every `n`.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
+#[serde(transparent)]
 pub struct Time(Rational);
 
 impl Time {
