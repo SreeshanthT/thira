@@ -64,6 +64,14 @@ jobs:
       - name: Rust test
         run: cargo test --workspace --locked
 
+      - name: Upload golden-frame failures
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: golden-failures-${{ matrix.os }}
+          path: target/golden-failures/
+          if-no-files-found: ignore
+
   dependencies:
     name: Dependency licences and advisories
     runs-on: ubuntu-latest

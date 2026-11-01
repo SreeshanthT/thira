@@ -3945,6 +3945,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "thira-golden"
+version = "0.0.0"
+dependencies = [
+ "png",
+]
+
+[[package]]
 name = "thira-model"
 version = "0.0.0"
 dependencies = [
@@ -3960,6 +3967,7 @@ name = "thira-render"
 version = "0.0.0"
 dependencies = [
  "pollster",
+ "thira-golden",
  "thiserror 2.0.21",
  "wgpu",
 ]
