@@ -233,7 +233,7 @@ Not scheduled. Listed so P2 items and ROADMAP Phase 4 have a home.
 
 ## Scope notes
 
-Places where this plan follows the PRD over the ROADMAP. The ROADMAP should be updated to match.
+Places where this plan follows the PRD over the original ROADMAP. ROADMAP.md has since been updated to match.
 
 1. **H.265, ProRes and image-sequence export** are in ROADMAP Phase 1 but are P1 in the PRD (EXP-2, EXP-5). Placed in M2.
 2. **OpenFX host** is in ROADMAP Phase 3 and the PRD's M3 says "plugin host", but FX-6 is P2. Placed in M4. M3 delivers documented API and plugin points (G4) instead.

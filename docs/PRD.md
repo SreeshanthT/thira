@@ -231,7 +231,7 @@ See [ROADMAP.md](ROADMAP.md) for phases. Key constraints that shape the requirem
 | M0 Foundations | Phase 0 | App opens, saves, reloads a project; GPU shader runs on all 3 OSes |
 | M1 v0.1 (alpha) | Phase 1: all P0 requirements | 3-track 1080p timeline plays at 30 fps; H.264 export matches reference |
 | M2 v0.5 (beta) | Phase 2: advanced editing, proxies, captions | 30-minute project edits smoothly with proxies |
-| M3 v1.0 | Phase 3: interchange, plugin host, all P1 | Real project round-trips through another editor via OTIO or EDL |
+| M3 v1.0 | Phase 3: interchange, documented API and plugin points, all P1 | Real project round-trips through another editor via OTIO or EDL |
 
 Dates are not committed until M0 is complete and velocity is measured.
 
@@ -259,3 +259,4 @@ Dates are not committed until M0 is complete and velocity is measured.
 | Date | Version | Change |
 | --- | --- | --- |
 | 2026-11-01 | 0.1 | Initial draft |
+| 2026-11-01 | 0.1.1 | M3 scope: documented API and plugin points instead of a plugin host (OpenFX is P2) |
