@@ -1,0 +1,17 @@
+[package]
+name = "thira-time"
+description = "Exact rational time, frame rates and SMPTE timecode for Thira"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+
+[dev-dependencies]
+proptest = "1.12.0"
+
+[lints]
+workspace = true
