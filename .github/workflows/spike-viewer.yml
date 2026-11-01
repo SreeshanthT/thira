@@ -61,10 +61,9 @@ jobs:
             THIRA_SPIKE_MODE=$mode THIRA_SPIKE_FRAMES=120 THIRA_SPIKE_HOLD_MS=10000 \
               THIRA_SPIKE_OUT="result-$mode.json" perl -e 'alarm shift; exec @ARGV' 180 "$bin" &
             pid=$!
-            if [ "$mode" = native ]; then
-              # Native mode holds its last frame for 10 s after ~4-6 s of rendering.
-              sleep 9 && screenshot "shot-native.png" || echo "screenshot failed"
-            fi
+            # Native mode holds its last frame for 10 s after ~4-6 s of rendering;
+            # transfer mode is mid-run at this point. Both shots show what is on screen.
+            sleep 9 && screenshot "shot-$mode.png" || echo "screenshot failed"
             wait $pid || echo "$mode exited with $?"
             cat "result-$mode.json" 2>/dev/null || echo "{\"mode\": \"$mode\", \"error\": \"no result\"}" > "result-$mode.json"
             echo "::endgroup::"
