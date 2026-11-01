@@ -23,7 +23,7 @@
 
 ## Roadmap
 
-See [docs/ROADMAP.md](docs/ROADMAP.md). The first milestone is a usable editor (Phases 0 to 2).
+See [docs/PRD.md](docs/PRD.md) for requirements and [docs/ROADMAP.md](docs/ROADMAP.md) for phases. The first milestone is a usable editor (Phases 0 to 2).
 
 ## Contributing
 
