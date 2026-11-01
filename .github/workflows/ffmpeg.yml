@@ -1,0 +1,184 @@
+name: FFmpeg (LGPL)
+
+# Produces the LGPL-only, shared FFmpeg that Thira links dynamically (PRD
+# section 10, issue #13). Windows and Linux use pinned BtbN builds verified by
+# SHA-256; macOS is built here from the same FFmpeg commit. Every package is
+# checked for GPL or non-free options before it can be published.
+#
+# Pull requests that change this file build and verify only. Run it manually
+# on main with `publish` to create the `ffmpeg-<version>` release.
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the packages as a GitHub release
+        type: boolean
+        default: false
+  pull_request:
+    paths: [".github/workflows/ffmpeg.yml"]
+
+permissions:
+  contents: read
+
+env:
+  FFMPEG_VERSION: "8.1.3"
+  # release/8.1 at n8.1.3-29, the commit BtbN built.
+  FFMPEG_COMMIT: ad3b795b72388fbb2b216e1e6fd38fba994e1df0
+  BTBN_TAG: autobuild-2026-11-01-12-49
+
+jobs:
+  prebuilt:
+    name: Verify ${{ matrix.platform }} (BtbN)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-x64
+            os: windows-latest
+            asset: ffmpeg-n8.1.3-29-gad3b795b72-win64-lgpl-shared-8.1.zip
+            sha256: 786b43f77ea260af71fbb1bcdaabd43df83492122fb5575027f659d490d30b37
+          - platform: linux-x64
+            os: ubuntu-22.04
+            asset: ffmpeg-n8.1.3-29-gad3b795b72-linux64-lgpl-shared-8.1.tar.xz
+            sha256: bcf24617e957f296e763e9f5d208065f27483f07aba433bc09d573f4d483c7fe
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Download and verify checksum
+        run: |
+          curl -fsSL -o "${{ matrix.asset }}" \
+            "https://github.com/BtbN/FFmpeg-Builds/releases/download/$BTBN_TAG/${{ matrix.asset }}"
+          echo "${{ matrix.sha256 }}  ${{ matrix.asset }}" | sha256sum -c -
+
+      - name: Unpack into the common layout
+        run: |
+          mkdir unpacked
+          case "${{ matrix.asset }}" in
+            *.zip) unzip -q "${{ matrix.asset }}" -d unpacked ;;
+            *) tar -xf "${{ matrix.asset }}" -C unpacked ;;
+          esac
+          src=$(echo unpacked/*)
+          dest="ffmpeg-$FFMPEG_VERSION-${{ matrix.platform }}"
+          mkdir "$dest"
+          cp -R "$src/bin" "$src/lib" "$src/include" "$dest/"
+          cp "$src/LICENSE.txt" "$dest/LICENSE.txt"
+          echo "DEST=$dest" >> "$GITHUB_ENV"
+
+      - name: Check the license is LGPL
+        run: |
+          ff="$DEST/bin/ffmpeg"
+          [ "$RUNNER_OS" = Linux ] && export LD_LIBRARY_PATH="$PWD/$DEST/lib"
+          "$ff" -hide_banner -buildconf > buildconf.txt
+          cat buildconf.txt
+          if grep -qE -- '--enable-(gpl|nonfree|version3)' buildconf.txt; then
+            echo "::error::GPL, non-free or (L)GPLv3 option found"; exit 1
+          fi
+          "$ff" -hide_banner -L | head -5 | tee license.txt
+          grep -q "Lesser General Public License" license.txt
+
+      - name: Package
+        run: |
+          printf 'Source: https://github.com/FFmpeg/FFmpeg/tree/%s\nBuild: https://github.com/BtbN/FFmpeg-Builds/releases/tag/%s (%s)\n' \
+            "$FFMPEG_COMMIT" "$BTBN_TAG" "${{ matrix.asset }}" > "$DEST/SOURCE.txt"
+          cp buildconf.txt "$DEST/BUILDCONF.txt"
+          tar -czf "$DEST.tar.gz" "$DEST"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ffmpeg-${{ matrix.platform }}
+          path: ffmpeg-*.tar.gz
+
+  macos:
+    name: Build ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-arm64
+            arch: arm64
+          - platform: macos-x64
+            arch: x86_64
+    runs-on: macos-latest
+    steps:
+      - name: Install build tools
+        run: brew install nasm pkg-config
+
+      - name: Fetch FFmpeg source at the pinned commit
+        run: |
+          mkdir src && cd src
+          git init -q
+          git fetch -q --depth 1 https://github.com/FFmpeg/FFmpeg.git "$FFMPEG_COMMIT"
+          git checkout -q FETCH_HEAD
+
+      - name: Configure (LGPL only, shared, no network)
+        working-directory: src
+        run: |
+          dest="$GITHUB_WORKSPACE/ffmpeg-$FFMPEG_VERSION-${{ matrix.platform }}"
+          flags="-arch ${{ matrix.arch }} -mmacosx-version-min=12.0"
+          cross=()
+          if [ "${{ matrix.arch }}" != "$(uname -m)" ]; then
+            cross=(--enable-cross-compile --arch=${{ matrix.arch }} --target-os=darwin)
+          fi
+          ./configure --prefix="$dest" "${cross[@]}" \
+            --cc="clang -arch ${{ matrix.arch }}" \
+            --extra-cflags="$flags" --extra-ldflags="$flags" \
+            --enable-shared --disable-static \
+            --disable-doc --disable-debug --disable-network \
+            --enable-videotoolbox --enable-audiotoolbox \
+            --install-name-dir=@rpath
+          echo "DEST=$dest" >> "$GITHUB_ENV"
+
+      - name: Check the license is LGPL
+        working-directory: src
+        run: |
+          grep -E '^#define CONFIG_(GPL|NONFREE|VERSION3) ' config.h | tee flags.txt
+          if grep -qE ' 1$' flags.txt; then
+            echo "::error::GPL, non-free or (L)GPLv3 enabled"; exit 1
+          fi
+
+      - name: Build
+        working-directory: src
+        run: make -j"$(sysctl -n hw.ncpu)" && make install
+
+      - name: Smoke-run the native build
+        if: matrix.arch == 'arm64'
+        run: |
+          "$DEST/bin/ffmpeg" -hide_banner -L | head -5 | tee license.txt
+          grep -q "Lesser General Public License" license.txt
+
+      - name: Package
+        run: |
+          cp src/COPYING.LGPLv2.1 "$DEST/LICENSE.txt"
+          grep '^FFMPEG_CONFIGURATION' src/config.h > "$DEST/BUILDCONF.txt" || true
+          printf 'Source: https://github.com/FFmpeg/FFmpeg/tree/%s\nBuilt by the Thira "FFmpeg (LGPL)" workflow\n' \
+            "$FFMPEG_COMMIT" > "$DEST/SOURCE.txt"
+          tar -czf "$(basename "$DEST").tar.gz" "$(basename "$DEST")"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ffmpeg-${{ matrix.platform }}
+          path: ffmpeg-*.tar.gz
+
+  publish:
+    name: Publish release
+    needs: [prebuilt, macos]
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: ffmpeg-*
+          merge-multiple: true
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha256sum ffmpeg-*.tar.gz | tee SHA256SUMS
+          gh release create "ffmpeg-$FFMPEG_VERSION" --repo "$GITHUB_REPOSITORY" \
+            --title "FFmpeg $FFMPEG_VERSION (LGPL, shared)" \
+            --notes "LGPL-only shared FFmpeg $FFMPEG_VERSION for Thira development and packaging. Source: https://github.com/FFmpeg/FFmpeg/tree/$FFMPEG_COMMIT. Windows and Linux repackage BtbN build $BTBN_TAG; macOS is built by this workflow. Each package contains LICENSE.txt, SOURCE.txt and BUILDCONF.txt." \
+            ffmpeg-*.tar.gz SHA256SUMS
