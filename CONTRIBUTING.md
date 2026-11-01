@@ -66,7 +66,7 @@ The repository layout follows [ADR 0001](docs/adr/0001-architecture.md): engine 
 1. Pick an issue, or comment on one to say you are working on it.
 2. Create a branch from `main` named `<type>/<short-description>`, for example `feat/blade-tool` or `fix/seek-off-by-one`.
 3. Keep each pull request to one issue. Small pull requests are reviewed faster.
-4. Add tests with the change. Engine behavior needs unit tests; rendering changes need golden-frame tests.
+4. Add tests with the change. Engine behavior needs unit tests; rendering changes need golden-frame tests. Golden PNGs live next to the tests (for example `crates/thira-render/tests/golden/`). After an intended visual change, regenerate them with `THIRA_UPDATE_GOLDEN=1 cargo test`, look at every changed image, and commit them. On a mismatch, the actual and diff images are written to `target/golden-failures/` (and uploaded by CI).
 5. Update user docs when behavior changes (PRD principle 5).
 6. Open a pull request against `main` and fill in the template. Reference the issue with `Closes #N`.
 
