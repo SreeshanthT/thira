@@ -170,7 +170,8 @@ jobs:
           dir=$(echo ffmpeg-*-${{ matrix.platform }})
           export LD_LIBRARY_PATH="$PWD/$dir/lib"
           "$dir/bin/ffmpeg" -hide_banner -L | head -5 | tee license.txt
-          grep -q "Lesser General Public License" license.txt
+          # The notice wraps across lines; join them before matching.
+          tr '\n' ' ' < license.txt | grep -q "Lesser General Public License .*version 2.1"
           "$dir/bin/ffprobe" -hide_banner -version | head -3
           # Encode a short test clip and probe it, to prove the libraries work.
           "$dir/bin/ffmpeg" -hide_banner -loglevel error -f lavfi -i testsrc2=size=320x180:rate=25:duration=1 \
