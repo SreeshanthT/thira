@@ -248,7 +248,7 @@ Dates are not committed until M0 is complete and velocity is measured.
 
 ## 15. Open questions
 
-1. Final project file format: single file (zip) or folder?
+1. ~~Final project file format: single file (zip) or folder?~~ Decided: a single SQLite `.thira` file ([ADR 0002](adr/0002-project-file-format.md)).
 2. Minimum GPU requirements for Linux (Vulkan 1.2 baseline)?
 3. Whether to publish under a foundation or personal account.
 4. Name and logo trademark search for "Thira".
