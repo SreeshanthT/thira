@@ -11,14 +11,15 @@ fn data(name: &str) -> PathBuf {
 
 #[test]
 fn loaded_ffmpeg_is_lgpl_and_matches_the_headers() {
+    // A free-form string ("8.1.3", or a git hash for builds from a commit).
     let version = check_ffmpeg().expect("FFmpeg check");
-    assert!(
-        version.starts_with("8.1"),
-        "unexpected FFmpeg version {version}"
-    );
+    assert!(!version.is_empty());
 
     let libraries = libraries();
     assert_eq!(libraries.len(), 7);
+    // libavformat 62 is FFmpeg 8.
+    assert_eq!(libraries[2].name, "avformat");
+    assert_eq!(libraries[2].version.major, 62);
     for library in libraries {
         assert_eq!(library.license, LGPL, "lib{}", library.name);
         for option in ["--enable-gpl", "--enable-version3", "--enable-nonfree"] {
@@ -78,7 +79,9 @@ fn probe_reports_missing_files() {
 
 #[test]
 fn probe_rejects_files_that_are_not_media() {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+    // Not a text file: FFmpeg accepts most text as LRC lyrics (subtitles).
+    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("not-media.bin");
+    std::fs::write(&path, [0xFF; 4096]).expect("write test file");
     assert!(matches!(
         thira_media::probe(&path),
         Err(MediaError::Open { .. })
