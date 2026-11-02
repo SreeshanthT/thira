@@ -22,3 +22,6 @@ Thumbs.db
 .env
 .env.*
 *.thira-cache
+
+# FFmpeg downloaded by `pnpm ffmpeg:fetch`
+/third_party/ffmpeg/

@@ -1,0 +1,17 @@
+[package]
+name = "thira-media"
+description = "FFmpeg (LGPL, dynamically linked) for Thira: probing, and later decoding and encoding"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+rsmpeg = "0.18.0"
+thira-time = { path = "../thira-time" }
+thiserror = "2.0.21"
+
+[lints]
+workspace = true

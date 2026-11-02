@@ -14,7 +14,8 @@
     "tauri": "tauri",
     "test": "vitest run",
     "lint": "eslint . && prettier --check ui \"*.{ts,js,json}\" app/tauri.conf.json",
-    "format": "prettier --write ui \"*.{ts,js,json}\" app/tauri.conf.json"
+    "format": "prettier --write ui \"*.{ts,js,json}\" app/tauri.conf.json",
+    "ffmpeg:fetch": "node scripts/fetch-ffmpeg.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.4",
