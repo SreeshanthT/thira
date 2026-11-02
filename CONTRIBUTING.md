@@ -43,7 +43,23 @@ sudo apt install build-essential curl wget file libssl-dev libxdo-dev \
 
 Rendering tests need a GPU or a software adapter. Windows and macOS always have one; on a Linux machine without a GPU, install Mesa's software Vulkan driver: `sudo apt install mesa-vulkan-drivers`.
 
-FFmpeg setup will be added here when media support lands ([#13](https://github.com/SreeshanthT/thira/issues/13)).
+### FFmpeg
+
+Thira links an LGPL 2.1+ build of FFmpeg dynamically ([#13](https://github.com/SreeshanthT/thira/issues/13)). Download the pinned build once, and again whenever its version changes:
+
+```sh
+pnpm ffmpeg:fetch
+```
+
+This puts it in `third_party/ffmpeg/<version>/` (git-ignored) after checking its SHA-256. `.cargo/config.toml` points the build there. The packages are built by the [FFmpeg (LGPL) workflow](.github/workflows/ffmpeg.yml) and published as a [GitHub release](https://github.com/SreeshanthT/thira/releases/tag/ffmpeg-8.1.3); the build refuses any FFmpeg configured with `--enable-gpl`, `--enable-version3` or `--enable-nonfree`.
+
+The Rust bindings are generated with bindgen, which needs libclang:
+
+- Windows: `winget install LLVM.LLVM`
+- macOS: included in the Xcode Command Line Tools.
+- Linux: `sudo apt install libclang-dev`
+
+`cargo test` finds the FFmpeg libraries without extra setup: on Linux and macOS the test binaries carry the library path, and on Windows the DLLs are copied next to them.
 
 ## Building and testing
 

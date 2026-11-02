@@ -1,0 +1,8 @@
+# Where rusty_ffmpeg (under thira-media) finds the LGPL FFmpeg downloaded by
+# `pnpm ffmpeg:fetch` (scripts/fetch-ffmpeg.mjs, which pins the version).
+# Variables already set in the environment take precedence, so another
+# LGPL build can be used by exporting these.
+[env]
+FFMPEG_INCLUDE_DIR = { value = "third_party/ffmpeg/8.1.3/include", relative = true }
+FFMPEG_LIBS_DIR = { value = "third_party/ffmpeg/8.1.3/lib", relative = true }
+FFMPEG_LINK_MODE = "dynamic"
