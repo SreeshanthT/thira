@@ -9,9 +9,12 @@ name: FFmpeg (LGPL)
 # - Linux is built on Ubuntu 22.04 (the PRD minimum); Windows is cross-compiled
 #   there with mingw-w64 and gets MSVC import libraries; macOS is built for arm64
 #   and x86_64 with a macOS 12 minimum.
+# - Each package also carries the Rust bindings (binding.rs) for its platform,
+#   generated on a native runner (.github/ffmpeg-bindgen), so building Thira
+#   needs no libclang.
 #
 # Pull requests that change this file build and verify only. Run it manually on
-# main with `publish` to create the `ffmpeg-<version>` release.
+# main with `publish` to create the `ffmpeg-<version>-<revision>` release.
 on:
   workflow_dispatch:
     inputs:
@@ -20,7 +23,7 @@ on:
         type: boolean
         default: false
   pull_request:
-    paths: [".github/workflows/ffmpeg.yml"]
+    paths: [".github/workflows/ffmpeg.yml", ".github/ffmpeg-bindgen/**"]
 
 permissions:
   contents: read
@@ -29,6 +32,9 @@ env:
   FFMPEG_VERSION: "8.1.3"
   # release/8.1 at n8.1.3-29.
   FFMPEG_COMMIT: ad3b795b72388fbb2b216e1e6fd38fba994e1df0
+  # Bump the revision for a new package of the same FFmpeg (1 was the
+  # `ffmpeg-8.1.3` release, without bindings). Must match scripts/fetch-ffmpeg.mjs.
+  PACKAGE: ffmpeg-8.1.3-2
   COMMON_FLAGS: >-
     --enable-shared --disable-static --disable-autodetect
     --disable-doc --disable-debug --disable-network --enable-zlib
@@ -61,9 +67,10 @@ jobs:
               --enable-cross-compile --arch=x86_64 --target-os=darwin
               --enable-pthreads --enable-videotoolbox --enable-audiotoolbox
     runs-on: ${{ matrix.os }}
-    env:
-      DEST: ${{ github.workspace }}/ffmpeg-8.1.3-${{ matrix.platform }}
     steps:
+      - name: Set the install directory
+        run: echo "DEST=$GITHUB_WORKSPACE/$PACKAGE-${{ matrix.platform }}" >> "$GITHUB_ENV"
+
       - name: Install build tools (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -80,12 +87,16 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install nasm pkg-config
 
+      # With the release tag in the history, FFmpeg's `git describe` gives a
+      # version like n8.1.3-29-gad3b795b72 instead of a bare commit hash.
       - name: Fetch FFmpeg source at the pinned commit
         run: |
           mkdir src && cd src
           git init -q
-          git fetch -q --depth 1 https://github.com/FFmpeg/FFmpeg.git "$FFMPEG_COMMIT"
-          git checkout -q FETCH_HEAD
+          git fetch -q --depth 64 https://github.com/FFmpeg/FFmpeg.git "$FFMPEG_COMMIT" \
+            "refs/tags/n$FFMPEG_VERSION:refs/tags/n$FFMPEG_VERSION"
+          git checkout -q "$FFMPEG_COMMIT"
+          git describe --tags
 
       - name: Configure
         working-directory: src
@@ -143,12 +154,62 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ffmpeg-${{ matrix.platform }}
+          name: build-${{ matrix.platform }}
           path: ffmpeg-*.tar.gz
+
+  bindings:
+    name: Bindings ${{ matrix.platform }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: linux-x64, os: ubuntu-22.04, target: x86_64-unknown-linux-gnu }
+          - { platform: windows-x64, os: windows-latest, target: x86_64-pc-windows-msvc }
+          - { platform: macos-arm64, os: macos-latest, target: aarch64-apple-darwin }
+          - { platform: macos-x64, os: macos-latest, target: x86_64-apple-darwin }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install libclang (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libclang-dev
+
+      - name: Install Rust
+        run: |
+          rustup toolchain install
+          rustup target add ${{ matrix.target }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-${{ matrix.platform }}
+
+      - name: Generate binding.rs
+        run: |
+          tar -xzf ffmpeg-*.tar.gz
+          name="$PACKAGE-${{ matrix.platform }}"
+          dir="$PWD/$name"
+          if [ "$RUNNER_OS" = Windows ]; then dir=$(cygpath -m "$dir"); fi
+          FFMPEG_INCLUDE_DIR="$dir/include" FFMPEG_LIBS_DIR="$dir/lib" FFMPEG_LINK_MODE=dynamic \
+            cargo build --locked --manifest-path .github/ffmpeg-bindgen/Cargo.toml \
+            --target ${{ matrix.target }} --target-dir "$RUNNER_TEMP/bindgen"
+          cp "$RUNNER_TEMP"/bindgen/${{ matrix.target }}/debug/build/rusty_ffmpeg-*/out/binding.rs "$dir/"
+          # bindgen 0.71 with a new libclang emitted FFmpeg structs without fields.
+          grep -A2 "pub struct AVFormatContext {" "$dir/binding.rs" | grep -q "pub av_class"
+          tar -czf "$name.tar.gz" "$name"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ffmpeg-${{ matrix.platform }}
+          path: ${{ env.PACKAGE }}-${{ matrix.platform }}.tar.gz
 
   verify:
     name: Verify ${{ matrix.platform }}
-    needs: build
+    needs: bindings
     strategy:
       fail-fast: false
       matrix:
@@ -167,8 +228,11 @@ jobs:
       - name: Run ffmpeg and ffprobe from the package
         run: |
           tar -xzf ffmpeg-*.tar.gz
-          dir=$(echo ffmpeg-*-${{ matrix.platform }})
+          dir="$PACKAGE-${{ matrix.platform }}"
+          test -s "$dir/binding.rs"
           export LD_LIBRARY_PATH="$PWD/$dir/lib"
+          "$dir/bin/ffmpeg" -hide_banner -version | head -1 | tee version.txt
+          grep -q "version n$FFMPEG_VERSION" version.txt
           "$dir/bin/ffmpeg" -hide_banner -L > license.txt
           cat license.txt
           # The notice wraps across lines (CRLF on Windows); join them before matching.
@@ -183,7 +247,7 @@ jobs:
 
   publish:
     name: Publish release
-    needs: [build, verify]
+    needs: [bindings, verify]
     if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -198,7 +262,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           sha256sum ffmpeg-*.tar.gz | tee SHA256SUMS
-          gh release create "ffmpeg-$FFMPEG_VERSION" --repo "$GITHUB_REPOSITORY" \
-            --title "FFmpeg $FFMPEG_VERSION (LGPL 2.1+, shared)" \
-            --notes "LGPL 2.1+ shared FFmpeg $FFMPEG_VERSION for Thira, built by the FFmpeg (LGPL) workflow from https://github.com/FFmpeg/FFmpeg/tree/$FFMPEG_COMMIT with no GPL, non-free or version3 options. Each package contains LICENSE.txt, SOURCE.txt and BUILDCONF.txt." \
+          gh release create "$PACKAGE" --repo "$GITHUB_REPOSITORY" \
+            --title "FFmpeg $FFMPEG_VERSION (LGPL 2.1+, shared), package ${PACKAGE##*-}" \
+            --notes "LGPL 2.1+ shared FFmpeg $FFMPEG_VERSION for Thira, built by the FFmpeg (LGPL) workflow from https://github.com/FFmpeg/FFmpeg/tree/$FFMPEG_COMMIT with no GPL, non-free or version3 options. Each package contains LICENSE.txt, SOURCE.txt, BUILDCONF.txt and the platform's Rust bindings (binding.rs)." \
             ffmpeg-*.tar.gz SHA256SUMS

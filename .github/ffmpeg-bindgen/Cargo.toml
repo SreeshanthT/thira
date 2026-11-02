@@ -1,0 +1,19 @@
+# Generates FFmpeg's Rust bindings for the "FFmpeg (LGPL)" workflow, so that
+# Thira's build uses a pregenerated binding.rs (FFMPEG_BINDING_PATH) and needs
+# no libclang. Building this crate runs rusty_ffmpeg's build script, which
+# writes binding.rs to its OUT_DIR.
+#
+# rsmpeg 0.18 depends on rusty_ffmpeg 0.16, whose bindgen 0.71 emits empty
+# structs with libclang 21+; 0.17 uses bindgen 0.72 with the same options and
+# headers, so its output fits 0.16 too.
+[package]
+name = "ffmpeg-bindgen"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+rusty_ffmpeg = "=0.17.0"
+
+# Not part of the Thira workspace.
+[workspace]
