@@ -1,5 +1,6 @@
 //! Tauri shell for Thira. Keeps no editing logic of its own; IPC handlers call into the engine crates.
 
+mod diagnostics;
 mod smoke;
 mod viewer;
 
@@ -109,10 +110,21 @@ fn start_viewer(window: &WebviewWindow) -> Result<ViewerHandle, Box<dyn std::err
 
 /// Starts the application and blocks until the last window closes.
 pub fn run() {
+    diagnostics::install_panic_hook();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(Engine::spawn())
         .setup(|app| {
+            // Logging is best effort: the app works without it.
+            match app.path().app_log_dir() {
+                Ok(dir) => match diagnostics::init(&dir) {
+                    Ok(guard) => {
+                        app.manage(guard);
+                    }
+                    Err(err) => eprintln!("logging disabled ({}): {err}", dir.display()),
+                },
+                Err(err) => eprintln!("logging disabled: {err}"),
+            }
             let window = app
                 .get_webview_window("main")
                 .ok_or("main window missing")?;

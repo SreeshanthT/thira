@@ -16,6 +16,24 @@ export default tseslint.config(
     languageOptions: { globals: globals.browser },
   },
   {
+    // No network access from the UI (PRD privacy); the CSP also blocks it.
+    files: ["ui/src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        ...["fetch", "XMLHttpRequest", "WebSocket", "EventSource", "WebTransport"].map((name) => ({
+          name,
+          message: "Thira makes no network calls.",
+        })),
+      ],
+      "no-restricted-properties": [
+        "error",
+        { object: "navigator", property: "sendBeacon", message: "Thira makes no network calls." },
+        { object: "window", property: "fetch", message: "Thira makes no network calls." },
+      ],
+    },
+  },
+  {
     // UI text must come from ui/src/locales (PRD APP-3): every string literal
     // is an error except these technical ones.
     files: ["ui/src/**/*.{ts,tsx}"],
