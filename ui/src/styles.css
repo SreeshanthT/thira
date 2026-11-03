@@ -1,12 +1,16 @@
 :root {
+  /* Dark theme base (PRD APP-2); a light theme can redefine these tokens. */
   color-scheme: dark;
   --bg: #16171a;
   --panel: #1f2024;
+  --panel-header: #26282d;
   --border: #2d2f35;
   --fg: #e6e7ea;
   --muted: #8b8f98;
+  --accent: #5b9dff;
   --danger: #ff7a7a;
   font-family: system-ui, sans-serif;
+  font-size: 13px;
 }
 
 html,
@@ -75,11 +79,58 @@ body,
   background: var(--panel);
 }
 
+/* Panels are opaque; only the viewer is a transparent hole for the native
+   backend, which draws the video underneath (ADR 0003). */
 .workspace {
   flex: 1;
-  display: flex;
   min-height: 0;
-  padding: 12px;
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.pane-title {
+  margin: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--panel-header);
+  border-bottom: 1px solid var(--border);
+}
+
+.pane-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+}
+
+.placeholder {
+  margin: 0;
+  color: var(--muted);
+}
+
+.viewer-pane {
+  display: flex;
+  height: 100%;
+}
+
+.separator {
+  flex: 0 0 4px;
+  background: var(--bg);
+}
+
+.separator[data-separator="hover"],
+.separator[data-separator="focus"],
+.separator[data-separator="active"] {
+  background: var(--accent);
+  outline: none;
 }
 
 .viewer {

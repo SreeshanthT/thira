@@ -23,7 +23,8 @@
     "i18next": "^26.7.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-i18next": "^17.1.11"
+    "react-i18next": "^17.1.11",
+    "react-resizable-panels": "^4.16.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
