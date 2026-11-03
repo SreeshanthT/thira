@@ -18,5 +18,7 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // Components expect i18n to be initialized, as main.tsx does.
+    setupFiles: ["./src/i18n.ts"],
   },
 });

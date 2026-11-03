@@ -1,0 +1,27 @@
+{
+  "app": {
+    "version": "Thira v{{version}}"
+  },
+  "toolbar": {
+    "new": "New",
+    "open": "Open…",
+    "save": "Save",
+    "saveAs": "Save As…",
+    "close": "Close"
+  },
+  "project": {
+    "none": "No project open",
+    "notSaved": "Not saved",
+    "unsavedMark": "Unsaved changes",
+    "fileType": "Thira project",
+    "untitled": "Untitled"
+  },
+  "dialog": {
+    "unsavedTitle": "Unsaved changes",
+    "discardPrompt": "The project has unsaved changes. Discard them?",
+    "discard": "Discard",
+    "quitPrompt": "The project has unsaved changes. Quit without saving?",
+    "quit": "Quit",
+    "cancel": "Cancel"
+  }
+}

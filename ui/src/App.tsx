@@ -1,11 +1,13 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { appVersion, isEngineError, projectInfo, type ProjectInfo } from "./ipc";
 import * as project from "./project";
 import { Viewer } from "./Viewer";
 
 // Placeholder shell; the panel layout arrives in #15.
 export function App() {
+  const { t } = useTranslation();
   const [version, setVersion] = useState<string | null>(null);
   const [info, setInfo] = useState<ProjectInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -79,29 +81,29 @@ export function App() {
   return (
     <main className="app">
       <header className="toolbar">
-        <button onClick={onNew}>New</button>
-        <button onClick={onOpen}>Open…</button>
+        <button onClick={onNew}>{t("toolbar.new")}</button>
+        <button onClick={onOpen}>{t("toolbar.open")}</button>
         <button onClick={onSave} disabled={!info}>
-          Save
+          {t("toolbar.save")}
         </button>
         <button onClick={onSaveAs} disabled={!info}>
-          Save As…
+          {t("toolbar.saveAs")}
         </button>
         <button onClick={onClose} disabled={!info}>
-          Close
+          {t("toolbar.close")}
         </button>
         <span className="project" aria-live="polite">
           {info ? (
             <>
               <strong>{info.name}</strong>
-              {info.dirty && <span title="Unsaved changes"> •</span>}
-              <span className="path">{info.path ?? "Not saved"}</span>
+              {info.dirty && <span title={t("project.unsavedMark")}> •</span>}
+              <span className="path">{info.path ?? t("project.notSaved")}</span>
             </>
           ) : (
-            "No project open"
+            t("project.none")
           )}
         </span>
-        {version && <span className="version">Thira v{version}</span>}
+        {version && <span className="version">{t("app.version", { version })}</span>}
       </header>
       {error && (
         <p className="error" role="alert">
