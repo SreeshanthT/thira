@@ -1,8 +1,13 @@
 import { ask, open, save } from "@tauri-apps/plugin-dialog";
+import i18n from "./i18n";
 import * as ipc from "./ipc";
 import type { ProjectInfo } from "./ipc";
 
-const FILTERS = [{ name: "Thira project", extensions: ["thira"] }];
+const EXTENSION = "thira";
+
+function filters() {
+  return [{ name: i18n.t("project.fileType"), extensions: [EXTENSION] }];
+}
 
 /**
  * Runs an action that replaces the open project. If the engine refuses because of
@@ -14,11 +19,11 @@ async function replacing<T>(action: (force: boolean) => Promise<T>): Promise<T |
     return await action(false);
   } catch (err) {
     if (!ipc.isEngineError(err) || err.code !== "unsaved") throw err;
-    const discard = await ask("The project has unsaved changes. Discard them?", {
-      title: "Unsaved changes",
+    const discard = await ask(i18n.t("dialog.discardPrompt"), {
+      title: i18n.t("dialog.unsavedTitle"),
       kind: "warning",
-      okLabel: "Discard",
-      cancelLabel: "Cancel",
+      okLabel: i18n.t("dialog.discard"),
+      cancelLabel: i18n.t("dialog.cancel"),
     });
     return discard ? action(true) : undefined;
   }
@@ -29,13 +34,16 @@ export function newProject(): Promise<ProjectInfo | undefined> {
 }
 
 export async function openProject(): Promise<ProjectInfo | undefined> {
-  const path = await open({ filters: FILTERS, multiple: false, directory: false });
+  const path = await open({ filters: filters(), multiple: false, directory: false });
   if (path === null) return undefined;
   return replacing((force) => ipc.openProject(path, force));
 }
 
 export async function saveProjectAs(): Promise<ProjectInfo | undefined> {
-  const path = await save({ filters: FILTERS, defaultPath: "Untitled.thira" });
+  const path = await save({
+    filters: filters(),
+    defaultPath: `${i18n.t("project.untitled")}.${EXTENSION}`,
+  });
   if (path === null) return undefined;
   return ipc.saveProjectAs(path);
 }
@@ -58,10 +66,10 @@ export async function closeProject(): Promise<boolean> {
 export async function confirmQuit(): Promise<boolean> {
   const info = await ipc.projectInfo();
   if (!info?.dirty) return true;
-  return ask("The project has unsaved changes. Quit without saving?", {
-    title: "Unsaved changes",
+  return ask(i18n.t("dialog.quitPrompt"), {
+    title: i18n.t("dialog.unsavedTitle"),
     kind: "warning",
-    okLabel: "Quit",
-    cancelLabel: "Cancel",
+    okLabel: i18n.t("dialog.quit"),
+    cancelLabel: i18n.t("dialog.cancel"),
   });
 }

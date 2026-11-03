@@ -82,6 +82,10 @@ The repository layout follows [ADR 0001](docs/adr/0001-architecture.md): engine 
 
 `main` is protected: every change goes through a pull request, and CI must pass on Windows, macOS and Linux before merging.
 
+### UI text
+
+All text the user sees goes through i18next ([i18next docs](https://www.i18next.com)): add the English string to `ui/src/locales/en.json` and use it with `t("section.key")` from `useTranslation()` in components, or `i18n.t` elsewhere. Keys are type-checked, and `pnpm lint` fails on string literals in `ui/src` (tests excepted). Technical strings such as IPC command names are allowed by name in `eslint.config.js`.
+
 ### Unsafe code
 
 `unsafe` is denied in every crate except `thira-media`, which may use it for FFmpeg calls that rsmpeg does not wrap. There, each use needs a local `#[allow(unsafe_code)]` and a `// SAFETY:` comment explaining why it is sound; clippy rejects unsafe blocks without one.
