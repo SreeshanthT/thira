@@ -4,6 +4,14 @@
 
 [graph]
 all-features = true
+# The desktop platforms Thira ships for; mobile-only dependencies (such as
+# Tauri's HTTP client on Android and iOS) are out of scope.
+targets = [
+    "x86_64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+]
 
 [licenses]
 allow = [
@@ -29,6 +37,23 @@ unmaintained = "workspace"
 multiple-versions = "allow"
 wildcards = "deny"
 allow-wildcard-paths = true
+# No telemetry and no network access (PRD privacy): HTTP, WebSocket and
+# network Tauri plugins must not enter the dependency tree. Update checks, if
+# added, need an explicit decision and an exception here.
+deny = [
+    { crate = "reqwest", reason = "no network access" },
+    { crate = "hyper", reason = "no network access" },
+    { crate = "ureq", reason = "no network access" },
+    { crate = "curl", reason = "no network access" },
+    { crate = "isahc", reason = "no network access" },
+    { crate = "attohttpc", reason = "no network access" },
+    { crate = "tungstenite", reason = "no network access" },
+    { crate = "tokio-tungstenite", reason = "no network access" },
+    { crate = "tauri-plugin-http", reason = "no network access" },
+    { crate = "tauri-plugin-updater", reason = "no network access" },
+    { crate = "tauri-plugin-websocket", reason = "no network access" },
+    { crate = "tauri-plugin-upload", reason = "no network access" },
+]
 
 [sources]
 unknown-registry = "deny"

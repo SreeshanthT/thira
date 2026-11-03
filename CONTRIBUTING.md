@@ -86,6 +86,20 @@ The repository layout follows [ADR 0001](docs/adr/0001-architecture.md): engine 
 
 All text the user sees goes through i18next ([i18next docs](https://www.i18next.com)): add the English string to `ui/src/locales/en.json` and use it with `t("section.key")` from `useTranslation()` in components, or `i18n.t` elsewhere. Keys are type-checked, and `pnpm lint` fails on string literals in `ui/src` (tests excepted). Technical strings such as IPC command names are allowed by name in `eslint.config.js`.
 
+### Logs and privacy
+
+Thira sends nothing off the machine: no telemetry and no network access. cargo-deny bans HTTP and WebSocket crates (`deny.toml`), `app/tests/privacy.rs` checks that the webview's content security policy and permissions allow no remote sources, and `pnpm lint` rejects `fetch`, `WebSocket` and similar APIs in the UI.
+
+Logs stay local, in Tauri's app log directory:
+
+| OS | Directory |
+| --- | --- |
+| Windows | `%LOCALAPPDATA%\org.thira.editor\logs` |
+| macOS | `~/Library/Logs/org.thira.editor` |
+| Linux | `~/.local/share/org.thira.editor/logs` |
+
+`thira.<date>.log` rotates daily and is kept for a week; set `THIRA_LOG` (`RUST_LOG` syntax, for example `THIRA_LOG=debug`) for more detail. A panic writes `crash-<time>-<pid>.log` with the message, location and backtrace to the same directory; please attach it to bug reports.
+
 ### Unsafe code
 
 `unsafe` is denied in every crate except `thira-media`, which may use it for FFmpeg calls that rsmpeg does not wrap. There, each use needs a local `#[allow(unsafe_code)]` and a `// SAFETY:` comment explaining why it is sound; clippy rejects unsafe blocks without one.
