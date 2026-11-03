@@ -1,9 +1,11 @@
 // Downloads the LGPL FFmpeg build that Thira links against (issue #13) into
-// third_party/ffmpeg/<version>/, verifying it against the checksums below.
+// third_party/ffmpeg/<package>/, verifying it against the checksums below.
 //
-// The packages come from the `ffmpeg-<version>` release, built by the
-// "FFmpeg (LGPL)" workflow (.github/workflows/ffmpeg.yml). When bumping the
-// version, also update the paths in .cargo/config.toml.
+// The packages come from the `ffmpeg-<package>` release, built by the
+// "FFmpeg (LGPL)" workflow (.github/workflows/ffmpeg.yml). Each one holds the
+// shared libraries, headers and pregenerated Rust bindings (binding.rs) for
+// one platform. When changing the package, also update the paths in
+// .cargo/config.toml.
 //
 // Usage: pnpm ffmpeg:fetch
 
@@ -13,13 +15,14 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync 
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const VERSION = "8.1.3";
-const RELEASE = `https://github.com/SreeshanthT/thira/releases/download/ffmpeg-${VERSION}`;
+// FFmpeg version and package revision.
+const PACKAGE = "8.1.3-2";
+const RELEASE = `https://github.com/SreeshanthT/thira/releases/download/ffmpeg-${PACKAGE}`;
 const SHA256 = {
-  "linux-x64": "1e3ccb2d81b1306b0d28ecf219c242b6ae9d86a1815de4d92025a4da8aff1b89",
-  "macos-arm64": "211384474df3d0ef3c177ded4b836a79263958d9baffbfd872f4ecf64ba0f4a1",
-  "macos-x64": "ad6e46666811e9e7a768bf043df2d6c12a59ac87b8e3c7a4440c2bfdffb3c3d5",
-  "windows-x64": "96b54d1e73b1a56a4297b96087baa6fdbac06f6b7680099e99e8a9d6356b51af",
+  "linux-x64": "5d92581bee6cf4babe3bf065895613762f8a73d619fccba5719b95f80c78326e",
+  "macos-arm64": "e3943ff241cb5edbe5a7ee0cbef32e1943a03c0fe4341341af7f06d38874f428",
+  "macos-x64": "a4696123bf45d448a7e0a294ebc45e50f4d4a66b4ca12320a98feb51b9d7962c",
+  "windows-x64": "2e4ea11153b996b74a67a8db535856ef733081081230f2f3b772ec5bfed1be79",
 };
 
 const os = { linux: "linux", darwin: "macos", win32: "windows" }[process.platform];
@@ -31,14 +34,14 @@ if (!(platform in SHA256)) {
 }
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "third_party", "ffmpeg");
-const dest = join(root, VERSION);
+const dest = join(root, PACKAGE);
 const stamp = join(dest, ".sha256");
 if (existsSync(stamp) && readFileSync(stamp, "utf8") === SHA256[platform]) {
-  console.log(`FFmpeg ${VERSION} (${platform}) is already in ${dest}`);
+  console.log(`FFmpeg ${PACKAGE} (${platform}) is already in ${dest}`);
   process.exit(0);
 }
 
-const name = `ffmpeg-${VERSION}-${platform}`;
+const name = `ffmpeg-${PACKAGE}-${platform}`;
 console.log(`Downloading ${name}.tar.gz`);
 const response = await fetch(`${RELEASE}/${name}.tar.gz`);
 if (!response.ok) {
@@ -66,4 +69,4 @@ writeFileSync(join(staging, name, ".sha256"), SHA256[platform]);
 rmSync(dest, { recursive: true, force: true });
 renameSync(join(staging, name), dest);
 rmSync(staging, { recursive: true, force: true });
-console.log(`FFmpeg ${VERSION} (${platform}) is in ${dest}`);
+console.log(`FFmpeg ${PACKAGE} (${platform}) is in ${dest}`);

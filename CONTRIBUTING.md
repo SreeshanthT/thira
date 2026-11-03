@@ -51,13 +51,7 @@ Thira links an LGPL 2.1+ build of FFmpeg dynamically ([#13](https://github.com/S
 pnpm ffmpeg:fetch
 ```
 
-This puts it in `third_party/ffmpeg/<version>/` (git-ignored) after checking its SHA-256. `.cargo/config.toml` points the build there. The packages are built by the [FFmpeg (LGPL) workflow](.github/workflows/ffmpeg.yml) and published as a [GitHub release](https://github.com/SreeshanthT/thira/releases/tag/ffmpeg-8.1.3); the build refuses any FFmpeg configured with `--enable-gpl`, `--enable-version3` or `--enable-nonfree`.
-
-The Rust bindings are generated with bindgen, which needs libclang:
-
-- Windows: `winget install LLVM.LLVM`
-- macOS: included in the Xcode Command Line Tools.
-- Linux: `sudo apt install libclang-dev`
+This puts it in `third_party/ffmpeg/<package>/` (git-ignored) after checking its SHA-256. `.cargo/config.toml` points the build there. The packages are built by the [FFmpeg (LGPL) workflow](.github/workflows/ffmpeg.yml) and published as a [GitHub release](https://github.com/SreeshanthT/thira/releases/tag/ffmpeg-8.1.3-2); the build refuses any FFmpeg configured with `--enable-gpl`, `--enable-version3` or `--enable-nonfree`. Each package includes pregenerated Rust bindings, so you do not need libclang.
 
 `cargo test` finds the FFmpeg libraries without extra setup: on Linux and macOS the test binaries carry the library path, and on Windows the DLLs are copied next to them.
 
