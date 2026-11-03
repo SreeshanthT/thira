@@ -44,7 +44,21 @@ export default tseslint.config(
               "Error",
             ],
           },
-          "object-properties": { exclude: ["[A-Z_-]+", "kind"] },
+          "object-properties": { exclude: ["[A-Z_-]+", "kind", "id"] },
+          "jsx-attributes": {
+            // Defaults, plus layout orientation.
+            exclude: [
+              "className",
+              "styleName",
+              "style",
+              "type",
+              "key",
+              "id",
+              "width",
+              "height",
+              "orientation",
+            ],
+          },
         },
       ],
     },

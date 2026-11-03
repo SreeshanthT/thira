@@ -3,9 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { appVersion, isEngineError, projectInfo, type ProjectInfo } from "./ipc";
 import * as project from "./project";
-import { Viewer } from "./Viewer";
+import { Workspace } from "./Workspace";
 
-// Placeholder shell; the panel layout arrives in #15.
 export function App() {
   const { t } = useTranslation();
   const [version, setVersion] = useState<string | null>(null);
@@ -110,9 +109,7 @@ export function App() {
           {error}
         </p>
       )}
-      <section className="workspace">
-        <Viewer />
-      </section>
+      <Workspace />
     </main>
   );
 }

@@ -23,5 +23,23 @@
     "quitPrompt": "The project has unsaved changes. Quit without saving?",
     "quit": "Quit",
     "cancel": "Cancel"
+  },
+  "panels": {
+    "resize": "Resize panels",
+    "media": {
+      "title": "Media Pool",
+      "empty": "Imported media will appear here."
+    },
+    "viewer": {
+      "title": "Viewer"
+    },
+    "inspector": {
+      "title": "Inspector",
+      "empty": "Select a clip to see its properties."
+    },
+    "timeline": {
+      "title": "Timeline",
+      "empty": "Drag media here to start editing."
+    }
   }
 }
