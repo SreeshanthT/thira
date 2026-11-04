@@ -82,6 +82,16 @@ The repository layout follows [ADR 0001](docs/adr/0001-architecture.md): engine 
 
 `main` is protected: every change goes through a pull request, and CI must pass on Windows, macOS and Linux before merging.
 
+### Benchmarks
+
+Performance-sensitive engine code has [Criterion](https://bheisler.github.io/criterion.rs/book/) benchmarks in `crates/*/benches/`. Add one when you add such code, and run them with:
+
+```sh
+cargo bench --workspace --bench '*'
+```
+
+The Benchmarks workflow measures the pull request and its base alternately on one runner and reports any benchmark over 10% slower, comparing each side's fastest round (see `scripts/bench-compare.mjs`). Results from `main` are added to the history on the `gh-pages` branch. The check is not required yet, but do not ignore a failure: re-run it once, and if it fails again, fix the slowdown or explain it in the pull request.
+
 ### UI text
 
 All text the user sees goes through i18next ([i18next docs](https://www.i18next.com)): add the English string to `ui/src/locales/en.json` and use it with `t("section.key")` from `useTranslation()` in components, or `i18n.t` elsewhere. Keys are type-checked, and `pnpm lint` fails on string literals in `ui/src` (tests excepted). Technical strings such as IPC command names are allowed by name in `eslint.config.js`.

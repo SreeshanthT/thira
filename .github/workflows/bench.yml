@@ -1,0 +1,122 @@
+name: Benchmarks
+
+# Pull requests: fails when a benchmark gets over 10% slower than the base branch
+# (issue #18). Results from different runs are not comparable on shared runners,
+# so one job measures both sides, alternating rounds; scripts/bench-compare.mjs
+# explains how they are compared.
+# Main: adds the results to the history on the gh-pages branch, for the trend.
+#
+# This is not a required check yet: it should first prove it does not fail by
+# chance.
+on:
+  pull_request:
+    paths:
+      - "crates/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rust-toolchain.toml"
+      - "scripts/bench-compare*"
+      - ".github/workflows/bench.yml"
+  push:
+    branches: [main]
+    paths:
+      - "crates/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rust-toolchain.toml"
+      - "scripts/bench-compare*"
+      - ".github/workflows/bench.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  compare:
+    name: Compare with base
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Test the comparison script
+        run: node --test "scripts/*.test.mjs"
+
+      # Rendering benchmarks need a software Vulkan driver on runners without a GPU.
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+
+      - name: Install Rust toolchain (from rust-toolchain.toml)
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check out the base branch
+        id: base
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git worktree add "$RUNNER_TEMP/base" "$BASE"
+          if compgen -G "$RUNNER_TEMP/base/crates/*/benches/*.rs" > /dev/null; then
+            echo "has_benches=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "The base branch has no benchmarks to compare with." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Check that the benchmarks run
+        if: steps.base.outputs.has_benches != 'true'
+        run: cargo bench --locked --workspace --bench '*' -- --test
+
+      - name: Measure base and head, alternating
+        if: steps.base.outputs.has_benches == 'true'
+        run: |
+          export CRITERION_HOME="$RUNNER_TEMP/criterion"
+          run() { cargo bench --locked --workspace --bench '*' -- \
+            --save-baseline "$1" --warm-up-time 1 --measurement-time 3; }
+          for round in 1 2 3; do
+            (cd "$RUNNER_TEMP/base" && run "base-$round")
+            run "head-$round"
+          done
+
+      - name: Compare
+        if: steps.base.outputs.has_benches == 'true'
+        run: node scripts/bench-compare.mjs "$RUNNER_TEMP/criterion" base head
+
+  history:
+    name: Store history
+    if: github.event_name == 'push'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+
+      - name: Install Rust toolchain (from rust-toolchain.toml)
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run benchmarks
+        run: |
+          cargo bench --locked --workspace --bench '*' -- --output-format bencher | tee bench.txt
+
+      # Pinned to a commit: this third-party action gets a token that can write.
+      - uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2
+        with:
+          tool: cargo
+          output-file-path: bench.txt
+          github-token: ${{ github.token }}
+          gh-pages-branch: gh-pages
+          benchmark-data-dir-path: dev/bench
+          auto-push: true

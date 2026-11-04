@@ -14,7 +14,12 @@ thiserror = "2.0.21"
 wgpu = "30"
 
 [dev-dependencies]
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 thira-golden = { path = "../thira-golden" }
+
+[[bench]]
+name = "render"
+harness = false
 
 [lints]
 workspace = true
