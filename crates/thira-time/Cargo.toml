@@ -12,7 +12,12 @@ publish = false
 serde = { version = "1.0.229", features = ["derive"] }
 
 [dev-dependencies]
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 proptest = "1.12.0"
+
+[[bench]]
+name = "timecode"
+harness = false
 
 [lints]
 workspace = true
