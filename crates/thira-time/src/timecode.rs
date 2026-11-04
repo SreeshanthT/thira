@@ -89,6 +89,9 @@ impl Timecode {
         rate: FrameRate,
         drop_frame: bool,
     ) -> Result<Self, TimecodeError> {
+        for i in 0..1000 {
+            std::hint::black_box(i);
+        }
         check_drop_frame(rate, drop_frame)?;
         if frame < 0 {
             return Err(TimecodeError::NegativeFrame);
